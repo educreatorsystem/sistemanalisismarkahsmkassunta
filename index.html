@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ms">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EduCreator System Workshop 2.0</title>
+    <meta
+      name="description"
+      content="Landing page pendaftaran EduCreator System Workshop 2.0 untuk guru membina sistem pendidikan dengan Canva Code dan ChatGPT."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#home" aria-label="EduCreator System Workshop">
+        <img
+          src="https://iili.io/Cz1yxG2.md.png"
+          alt="Logo EduCreator"
+          class="brand-logo"
+        />
+        <span>EduCreator System</span>
+      </a>
+      <nav class="nav-links" aria-label="Navigasi utama">
+        <a href="#manfaat">Manfaat</a>
+        <a href="#bayaran">Bayaran</a>
+        <a href="#daftar">Daftar</a>
+        <a href="#admin">Admin</a>
+      </nav>
+    </header>
+
+    <main id="home">
+      <section class="hero-section">
+        <div class="hero-copy">
+          <p class="eyebrow">Workshop khas untuk guru</p>
+          <h1>EduCreator System Workshop 2.0</h1>
+          <p class="hero-text">
+            Bimbingan praktikal untuk guru yang ingin membina sistem pendidikan
+            sendiri, pembelajaran berbentuk game, dan sistem pengurusan yang
+            lebih cekap menggunakan Canva Code + ChatGPT dengan emel Education.
+          </p>
+
+          <div class="hero-actions">
+            <a class="primary-button" href="#daftar">Daftar Sekarang</a>
+            <a class="ghost-button" href="#bayaran">Lihat Maklumat Bayaran</a>
+          </div>
+        </div>
+
+        <aside class="event-panel" aria-label="Maklumat workshop">
+          <div class="event-logo-wrap">
+            <img
+              src="https://iili.io/Cz1yxG2.md.png"
+              alt="Logo EduCreator"
+              class="event-logo"
+            />
+          </div>
+          <dl class="event-list">
+            <div>
+              <dt>Tarikh</dt>
+              <dd>27 Jun 2026, Sabtu</dd>
+            </div>
+            <div>
+              <dt>Masa</dt>
+              <dd>2.30 PM - 5.30 PM</dd>
+            </div>
+            <div>
+              <dt>Yuran</dt>
+              <dd>RM 50 sahaja</dd>
+            </div>
+          </dl>
+        </aside>
+      </section>
+
+      <section id="manfaat" class="section-block">
+        <div class="section-heading">
+          <p class="eyebrow">Apa yang cikgu akan dapat</p>
+        </div>
+
+        <div class="benefit-grid">
+          <article class="benefit-card">
+            <span class="card-icon">01</span>
+            <h3>Sijil Pembelajaran Atas Talian</h3>
+            <p>Termasuk 8 jam mata kredit sebagai bukti penyertaan.</p>
+          </article>
+          <article class="benefit-card">
+            <span class="card-icon">02</span>
+            <h3>E-book Sistem Prompt Pendidikan</h3>
+            <p>Koleksi prompt untuk bantu cikgu rancang, bina, dan kemas kini sistem.</p>
+          </article>
+          <article class="benefit-card">
+            <span class="card-icon">03</span>
+            <h3>Rakaman Google Meet Kelas</h3>
+            <p>Boleh ulang kaji semula langkah pembinaan selepas sesi tamat.</p>
+          </article>
+          <article class="benefit-card">
+            <span class="card-icon">04</span>
+            <h3>Group Support Telegram</h3>
+            <p>Tempat bertanya, berkongsi hasil kerja, dan dapatkan sokongan selepas kelas.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="bayaran" class="payment-section">
+        <div class="section-heading">
+          <p class="eyebrow">Maklumat bayaran</p>
+        </div>
+
+        <div class="payment-layout">
+          <div class="bank-box">
+            <p class="bank-label">Maybank</p>
+            <p class="account-number" id="accountNumber">501114422550</p>
+            <p class="account-name">Heryani Binti Mohamad Mukhair</p>
+            <button class="copy-button" type="button" id="copyAccountButton">
+              Salin No Akaun
+            </button>
+            <p class="copy-status" id="copyStatus" role="status" aria-live="polite"></p>
+          </div>
+
+          <div class="steps-box">
+            <h3>Langkah pendaftaran</h3>
+            <ol>
+              <li>Buat bayaran ke akaun Maybank yang tertera.</li>
+              <li>Simpan resit bayaran dalam format gambar atau PDF.</li>
+              <li>Isi borang pembelian dan muat naik resit.</li>
+              <li>Admin akan semak resit dan sahkan tempahan.</li>
+              <li>Selepas disahkan, cikgu akan menerima emel pengesahan bersama link Telegram.</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section id="daftar" class="form-section">
+        <div class="form-copy">
+          <p class="eyebrow">Borang pembelian</p>
+          <h2>Daftar untuk sertai workshop.</h2>
+          <p>
+            Isi maklumat di bawah selepas bayaran dibuat. Tempahan cikgu akan
+            berstatus menunggu semakan sehingga admin mengesahkan resit.
+          </p>
+          <div class="notice-box telegram-note">
+            <strong>Group Support Telegram:</strong>
+            <span>Link join akan dihantar melalui emel selepas tempahan disahkan.</span>
+          </div>
+        </div>
+
+        <form class="purchase-form" id="purchaseForm">
+          <div class="field-group">
+            <label for="fullName">Nama</label>
+            <input id="fullName" name="fullName" type="text" autocomplete="name" required />
+          </div>
+          <div class="field-group">
+            <label for="email">Alamat Emel</label>
+            <input id="email" name="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="field-group">
+            <label for="schoolName">Nama Sekolah</label>
+            <input id="schoolName" name="schoolName" type="text" required />
+          </div>
+          <div class="field-group">
+            <label for="phone">No Telefon</label>
+            <input id="phone" name="phone" type="tel" autocomplete="tel" required />
+          </div>
+          <div class="field-group">
+            <label for="receipt">Muat Naik Resit Bayaran</label>
+            <input
+              id="receipt"
+              name="receipt"
+              type="file"
+              accept="image/*,.pdf"
+              required
+            />
+            <small>Format diterima: gambar atau PDF. Saiz dicadangkan bawah 5 MB.</small>
+          </div>
+          <button class="primary-button full-width" type="submit" id="submitButton">
+            Hantar Borang Pembelian
+          </button>
+          <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section id="admin" class="admin-section">
+        <div class="section-heading">
+          <p class="eyebrow">Panel admin</p>
+          <h2>Lihat rekod pembelian yang tersimpan.</h2>
+        </div>
+
+        <form class="admin-login" id="adminLoginForm">
+          <div class="field-group">
+            <label for="adminPassword">Kata Laluan Admin</label>
+            <input id="adminPassword" name="adminPassword" type="password" required />
+          </div>
+          <button class="secondary-button" type="submit" id="adminLoginButton">
+            Log Masuk Admin
+          </button>
+          <p class="form-status" id="adminStatus" role="status" aria-live="polite"></p>
+        </form>
+
+        <div class="records-wrap" id="recordsWrap" hidden>
+          <div class="records-toolbar">
+            <strong id="recordCount">0 rekod</strong>
+            <button class="ghost-button compact" type="button" id="refreshRecordsButton">
+              Muat Semula
+            </button>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tarikh</th>
+                  <th>Nama</th>
+                  <th>Emel</th>
+                  <th>Sekolah</th>
+                  <th>Telefon</th>
+                  <th>Resit</th>
+                  <th>Status</th>
+                  <th>Tindakan</th>
+                </tr>
+              </thead>
+              <tbody id="recordsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>EduCreator System Workshop 2.0</p>
+      <a href="#daftar">Daftar sekarang</a>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>

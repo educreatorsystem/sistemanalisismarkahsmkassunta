@@ -1878,8 +1878,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         }
 
         function printIndividualAnalysis() {
-            const source = document.querySelector('#print-ai table');
-            if (!source?.tBodies[0]?.rows.length || source.tBodies[0].rows[0].cells.length < 2) {
+            const tables = Array.from(document.querySelectorAll('#print-ai table'))
+                .filter(table => table.tBodies[0]?.rows.length && table.tBodies[0].rows[0].cells.length > 1);
+            const source = tables[0];
+            if (!source) {
                 showModal('Tiada Data', 'Sila pilih kelas dan pentaksiran yang mempunyai data.', 'error');
                 return;
             }
@@ -1896,7 +1898,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
                 const readRows = section => section ? Array.from(section.rows).map(row=>
                     Array.from(row.cells).map(cell=>({content:(cell.title || cell.textContent).trim(),
                         colSpan:cell.colSpan,rowSpan:cell.rowSpan}))) : [];
-                const tables = Array.from(document.querySelectorAll('#print-ai table'));
                 tables.forEach((table, index) => {
                 if(index > 0) doc.addPage('a4','landscape');
                 const sectionTitle = index === 0 ? 'Kedudukan Dalam Kelas (Ranking Purata)' : 'Murid Terbaik Mengikut Subjek';
@@ -1910,7 +1911,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
                     showHead:'everyPage', showFoot:'lastPage', rowPageBreak:'avoid',
                     didDrawPage:()=>{
                         doc.setFontSize(13); doc.setTextColor(25,40,60);
-                        doc.text('Analisis Individu',8,13);
+                        doc.text('Analisis Individu (Kelas)',8,13);
                         doc.setFontSize(9); doc.text(subtitle,8,20);
                         doc.setFontSize(10); doc.text(sectionTitle,8,28);
                     }
@@ -1923,10 +1924,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
                 }
                 const blob=doc.output('blob');
                 const url=URL.createObjectURL(blob);
-                const previous=document.getElementById('amp-pdf-preview');
+                const previous=document.getElementById('ai-pdf-preview');
                 if(previous) previous.closePreview();
                 const overlay=document.createElement('div');
-                overlay.id='amp-pdf-preview';
+                overlay.id='ai-pdf-preview';
                 overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');
                 overlay.setAttribute('aria-label','Pratonton PDF A4 Landskap');
                 overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:#0f172a;display:flex;flex-direction:column;padding:12px;gap:10px;';

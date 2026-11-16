@@ -795,14 +795,29 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             marks: []
         };
 
+        // --- Perlindungan rekod markah (versi selamat) ---
+        const MARKAH_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzM3Q4zRb0wG5UfzLMFc-HdbQWXvx_6D_u0dgqJcKIZqBkxC-w8H09gnrxT3T3KMKkbEw/exec';
+        let markahDataReady = false;
+        let sedangMenyimpan = false;
+        const editedMarkIds = new Set();
+
         // --- HELPER: Initializer & Ambil Data Langsung dari Google Sheet ---
         async function initApp() {
-            // Paparkan visual loading ketika mengambil data sheet
-            showModal('Memuat turun data...', 'Sedang mengambil tetapan dan rekod markah terkini dari pelbagai pangkalan data Google Sheets. Sila tunggu sebentar.', 'loading');
-            await fetchGoogleSheetData();
-            populateDropdowns();
-            closeModal();
-            switchTab('input'); // Buka tab input sebagai lalai selepas data siap
+            markahDataReady = false;
+            showModal('Memuat turun data...', 'Sedang memuat rekod markah daripada Google Sheets.', 'loading');
+            try {
+                await fetchGoogleSheetData();
+                populateDropdowns();
+                closeModal();
+                switchTab('input');
+            } catch (error) {
+                console.error('Gagal memuat data pangkalan:', error);
+                showModal('Data Belum Sedia', 'Proses simpan disekat untuk mengelakkan kehilangan markah. ' + error.message, 'error');
+            }
+        }
+
+        function tandakanMarkahDiubah(studentId) {
+            editedMarkIds.add(String(studentId));
         }
 
         async function fetchGoogleSheetData() {
@@ -815,13 +830,26 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
                 // Ambil data asas secara berasingan supaya sistem tidak kosong hanya kerana salah satu CSV gagal.
                 const csvMurid = await fetchCSVText(urlSenaraiMurid, 'CSV Nama Murid', true);
                 const csvSubjek = await fetchCSVText(urlSenaraiSubjek, 'CSV Pentaksiran dan Subjek', true);
+                // Baca Apps Script dahulu: lebih terkini berbanding CSV Publish to web.
+                // CSV hanya sandaran jika GET tidak boleh digunakan.
+                let dataMarkahLangsung = null;
                 let csvMarkah = '';
-
                 try {
-                    csvMarkah = await fetchCSVText(urlRekodMarkah, 'CSV Rekod Markah', false);
-                } catch (markahErr) {
-                    console.warn('CSV Rekod Markah tidak dapat dimuat. Sistem input masih boleh digunakan.', markahErr);
-                    csvMarkah = '';
+                    const res = await fetch(MARKAH_SCRIPT_URL + '?action=getMarks&t=' + Date.now(), { cache: 'no-store' });
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const json = await res.json();
+                    if (json.status !== 'success' || !Array.isArray(json.data)) {
+                        throw new Error(json.message || 'Respons getMarks tidak sah');
+                    }
+                    dataMarkahLangsung = json.data;
+                } catch (apiError) {
+                    console.warn('GET Apps Script tidak dapat digunakan. Cuba CSV.', apiError);
+                    // CSV mesti berjaya dimuat; kegagalan tidak boleh dianggap sebagai 0 markah.
+                    csvMarkah = await fetchCSVText(urlRekodMarkah, 'CSV Rekod Markah', true);
+                    const parsed = parseCSV(csvMarkah);
+                    if (!parsed.length || !findHeader(parsed[0], ['MARKAH', 'SKOR', 'MARK'])) {
+                        throw new Error('Data CSV markah kosong atau header tidak sah. Simpanan disekat.');
+                    }
                 }
 
                 // --- 1. PROSES JADUAL MURID & KELAS ---
@@ -867,8 +895,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
                 // --- 3. PROSES REKOD MARKAH MURID ---
                 MOCK_DB.marks = [];
-                if (csvMarkah && csvMarkah.trim() !== '') {
-                    const dataMarkah = parseCSV(csvMarkah);
+                {
+                    const dataMarkah = dataMarkahLangsung !== null
+                        ? dataMarkahLangsung : parseCSV(csvMarkah);
 
                     dataMarkah.forEach(row => {
                         const keyNama = findHeader(row, ['NAMA MURID', 'NAMA', 'NAMA PELAJAR']);
@@ -884,8 +913,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
                         const markah = keyMarkah ? String(row[keyMarkah] || '').trim().toUpperCase() : '';
 
                         if(nama !== '' && subjek !== '' && markah !== '') {
-                            const student = MOCK_DB.students.find(s => normalizeText(s.name) === normalizeText(nama) && normalizeText(s.class) === normalizeText(kelas)) 
-                                         || MOCK_DB.students.find(s => normalizeText(s.name) === normalizeText(nama));
+                            const student = MOCK_DB.students.find(s =>
+                                normalizeText(s.name) === normalizeText(nama) &&
+                                normalizeText(s.class) === normalizeText(kelas));
 
                             if(student) {
                                 MOCK_DB.marks.push({
@@ -909,9 +939,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
                     return;
                 }
 
+                markahDataReady = true;
             } catch (error) {
-                console.error('Ralat CSV:', error);
-                showModal('Ralat Pangkalan Data', error.message || 'Gagal memuat turun data dari pautan Google Sheet. Sila semak URL CSV dan tetapan Publish to web.', 'error');
+                markahDataReady = false;
+                throw error;
             }
         }
 
@@ -1115,6 +1146,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         }
 
         function loadInputTable() {
+            if (sedangMenyimpan) return;
+            editedMarkIds.clear();
             const selKelas = document.getElementById('input-kelas').value;
             const selPen = document.getElementById('input-pentaksiran').value;
             const selSub = document.getElementById('input-subjek').value;
@@ -1144,7 +1177,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
                         <td class="px-4 py-3">
                             <input type="text" id="mark-${stu.id}" value="${markVal}" 
                                 class="w-full border border-slate-300 rounded px-3 py-1 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-center uppercase"
-                                oninput="liveUpdateGrade(${stu.id}, ${form})">
+                                oninput="tandakanMarkahDiubah(${stu.id}); liveUpdateGrade(${stu.id}, ${form})">
                         </td>
                         <td class="px-4 py-3 text-center font-bold" id="gred-${stu.id}">${evalData.gred}</td>
                         <td class="px-4 py-3 text-slate-500 text-sm" id="tafsir-${stu.id}">${evalData.tafsiran}</td>
@@ -1162,6 +1195,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         function setQuickMark(studentId, type) {
             const input = document.getElementById(`mark-${studentId}`);
             input.value = type;
+            tandakanMarkahDiubah(studentId);
             const form = getFormByClassName(document.getElementById('input-kelas').value);
             liveUpdateGrade(studentId, form);
         }
@@ -1187,84 +1221,109 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         }
 
         async function simpanMarkah() {
+            if (sedangMenyimpan) return;
+            if (!markahDataReady) {
+                showModal('Simpanan Disekat', 'Data asal belum berjaya dimuat. Muat semula halaman dan cuba lagi.', 'error');
+                return;
+            }
+
             const selKelas = document.getElementById('input-kelas').value;
             const selPen = document.getElementById('input-pentaksiran').value;
             const selSub = document.getElementById('input-subjek').value;
             const form = getFormByClassName(selKelas);
-            const tbody = document.getElementById('input-tbody');
-            const rows = tbody.querySelectorAll('tr[data-studentid]');
-
-            let savedCount = 0;
-            let dataToSave = [];
+            const rows = document.querySelectorAll('#input-tbody tr[data-studentid]');
+            const dataToSave = [];
+            const pendingLocal = [];
+            let invalid = '';
 
             rows.forEach(row => {
-                const stuId = parseInt(row.getAttribute('data-studentid'));
-                const studentName = row.querySelector('td:nth-child(2)').innerText;
-                const markInput = document.getElementById(`mark-${stuId}`).value.trim().toUpperCase();
-                const gred = document.getElementById(`gred-${stuId}`).innerText;
-                const tafsiran = document.getElementById(`tafsir-${stuId}`).innerText;
-                
-                // Remove existing from local MOCK_DB so it updates instantly
-                MOCK_DB.marks = MOCK_DB.marks.filter(m => !(m.studentId === stuId && m.assessment === selPen && m.subject === selSub));
-                
-                let finalMark = 'TD';
-                if(markInput !== '') {
-                    finalMark = markInput === 'TH' ? 'TH' : (markInput === 'TD' ? 'TD' : parseInt(markInput));
-                    savedCount++;
+                const stuId = String(row.getAttribute('data-studentid'));
+                // Simpan hanya input yang benar-benar diubah oleh pengguna.
+                if (!editedMarkIds.has(stuId)) return;
+                const input = document.getElementById('mark-' + stuId);
+                const markInput = input.value.trim().toUpperCase();
+                // Ruangan yang dikosongkan TIDAK akan ditukar menjadi TD.
+                if (markInput === '') return;
+                if (!/^(TH|TD|\d{1,3})$/.test(markInput) ||
+                    (/^\d+$/.test(markInput) && Number(markInput) > 100)) {
+                    invalid = 'Markah tidak sah bagi ' + row.querySelector('td:nth-child(2)').innerText;
+                    return;
                 }
-                
-                MOCK_DB.marks.push({
-                    studentId: stuId,
-                    assessment: selPen,
-                    subject: selSub,
-                    mark: finalMark
-                });
-
-                // Kumpul data untuk dihantar secara pukal ke Google Sheets
+                const student = MOCK_DB.students.find(x => String(x.id) === stuId && x.class === selKelas);
+                if (!student) {
+                    invalid = 'Maklumat murid tidak sepadan. Sila muat semula sistem.';
+                    return;
+                }
+                const finalMark = /^(TH|TD)$/.test(markInput) ? markInput : Number(markInput);
+                const evaluation = evaluateMark(finalMark, form);
                 dataToSave.push({
-                    studentId: stuId,
-                    name: studentName,
+                    studentId: student.id,
+                    name: student.name,
                     kelas: selKelas,
                     form: form,
                     pentaksiran: selPen,
                     subjek: selSub,
                     mark: finalMark,
-                    gred: gred,
-                    tafsiran: tafsiran
+                    gred: evaluation.gred,
+                    tafsiran: evaluation.tafsiran
                 });
+                pendingLocal.push({ studentId: student.id, assessment: selPen, subject: selSub, mark: finalMark });
             });
 
-            // 1. Paparkan status loading
-            showModal('Sedang Menyimpan...', 'Sila tunggu sebentar, data sedang dihantar ke Google Sheets.', 'loading');
+            if (invalid) {
+                showModal('Markah Tidak Sah', invalid, 'error');
+                return;
+            }
+            if (!dataToSave.length) {
+                showModal('Tiada Perubahan', 'Tiada markah baharu yang diubah untuk disimpan. Ruangan kosong tidak akan dihantar sebagai TD.', 'error');
+                return;
+            }
 
-            const scriptURL = 'https://script.google.com/macros/s/AKfycbzM3Q4zRb0wG5UfzLMFc-HdbQWXvx_6D_u0dgqJcKIZqBkxC-w8H09gnrxT3T3KMKkbEw/exec';
-            
+            // Jangan benarkan pilihan kelas/subjek berubah semasa penghantaran.
+            sedangMenyimpan = true;
+            const selectors = ['input-kelas','input-pentaksiran','input-subjek'];
+            selectors.forEach(id => { const el = document.getElementById(id); if(el) el.disabled = true; });
+            document.querySelectorAll('#input-tbody input, #input-tbody button').forEach(el => el.disabled = true);
+            showModal('Sedang Menyimpan...', 'Sedang menghantar ' + dataToSave.length + ' rekod ke Google Sheets. Jangan tutup halaman.', 'loading');
+
             try {
-                // 2. Guna URLSearchParams
                 const params = new URLSearchParams();
                 params.append('action', 'saveMarks');
-                params.append('payload', JSON.stringify(dataToSave)); // Hantar data sebagai rentetan JSON
-
-                // 3. Proses 'Fetch' ke Apps Script
-                const response = await fetch(scriptURL, {
+                params.append('payload', JSON.stringify(dataToSave));
+                const response = await fetch(MARKAH_SCRIPT_URL, {
                     method: 'POST',
-                    body: params,
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    }
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params
                 });
-
+                if (!response.ok) throw new Error('HTTP ' + response.status);
                 const result = await response.json();
-
-                // 4. Semak status respons
-                if(result.status === 'success') {
-                    showModal('Berjaya Disimpan!', `${savedCount} rekod markah untuk subjek ${selSub} kelas ${selKelas} telah berjaya direkod ke pangkalan data Google Sheets.`, 'success');
-                } else {
-                    showModal('Ralat Penyimpanan', `Gagal menyimpan: ${result.message}`, 'error');
+                if (result.status !== 'success') {
+                    throw new Error(result.message || 'Apps Script tidak mengesahkan simpanan.');
                 }
+                if (Number(result.saved) !== dataToSave.length) {
+                    throw new Error('Bilangan rekod disahkan (' + result.saved +
+                        ') tidak sama dengan bilangan dihantar (' + dataToSave.length + '). Semak Google Sheet.');
+                }
+
+                // Hanya kemas kini memori selepas server mengesahkan kejayaan.
+                pendingLocal.forEach(item => {
+                    MOCK_DB.marks = MOCK_DB.marks.filter(m => !(
+                        m.studentId === item.studentId &&
+                        m.assessment === item.assessment && m.subject === item.subject));
+                    MOCK_DB.marks.push(item);
+                    editedMarkIds.delete(String(item.studentId));
+                });
+                showModal('Simpanan Disahkan',
+                    dataToSave.length + ' rekod ' + selSub + ' / ' + selKelas +
+                    ' disahkan diterima oleh Apps Script. Rekod lain tidak dihantar.', 'success');
             } catch (error) {
-                console.error('Fetch Error:', error);
-                showModal('Ralat Rangkaian', 'Gagal berhubung dengan Google Sheets. Markah disimpan secara lokal buat masa ini. Sila semak capaian internet.', 'error');
+                console.error('Ralat simpan markah:', error);
+                showModal('Simpanan Belum Disahkan',
+                    'Markah tidak dianggap tersimpan. Semak Google Sheet dahulu sebelum cuba lagi. ' + error.message, 'error');
+            } finally {
+                sedangMenyimpan = false;
+                selectors.forEach(id => { const el = document.getElementById(id); if(el) el.disabled = false; });
+                document.querySelectorAll('#input-tbody input, #input-tbody button').forEach(el => el.disabled = false);
             }
         }
 
